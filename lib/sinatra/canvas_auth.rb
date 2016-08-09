@@ -48,7 +48,7 @@ module Sinatra
         session['user_id'] = response['user']['id']
         session['access_token'] = response['access_token']
 
-        settings.oauth_callback(response) if settings.respond_to?(:oauth_callback)
+        oauth_callback(response) if self.respond_to?(:oauth_callback)
 
         redirect params['state']
       end
@@ -87,7 +87,7 @@ module Sinatra
         if CanvasAuth.auth_path?(self.settings, current_path)
           if session['user_id'].nil?
             redirect "#{request.env['SCRIPT_NAME']}#{settings.login_path}?state=#{current_path}"
-          elsif settings.respond_to?(:authorized) && !settings.authorized
+          elsif self.respond_to?(:authorized) && !authorized
             redirect "#{request.env['SCRIPT_NAME']}#{settings.unauthorized_redirect}"
           end
         end

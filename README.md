@@ -79,7 +79,6 @@ CanvasAuth requires a baseline configuration to function, as Canvas API settings
 * **canvas_url** (String)
 
   The full URL of the Canvas instance used for authentication.
-
   ```ruby
   set :canvas_url, 'https://ucdenver.instructure.com'
   ```
@@ -114,27 +113,6 @@ CanvasAuth requires a baseline configuration to function, as Canvas API settings
   authenticate '/admin', /^\/courses\/(\d)+$
   ```
 
-* **oauth_callback** (Proc)
-
-  Once the OAuth authentication request has been made, this proc is called with the API response from Canvas. This may be used to define a custom response handling action, such as saving the user's token in a database.
-  ```ruby
-  set :oauth_callback, Proc.new { |oauth_response|
-    uid = oauth_response['user']['id']
-    token = oauth_response['access_token']
-    db_connection.execute("UPDATE users SET access_token = ? where uid = ?", token, uid)
-  }
-  ```
-
-* **authorized** (Proc)
-
-  This proc may be defined to check the authorization priveleges of a user once they have logged in. It should return truthy for authorized users, falsy otherwise. Since this is called without parameters, it generally makes use of session variables and/or settings which were set during the oauth_callback proc or elsewhere in the app.
-
-  ```ruby
-  set :authorized, Proc.new {
-    session[:allowed_roles].includes?(session[:user_roles])
-  }
-  ```
-
 * **unauthorized_redirect** (String)  
   Default: "/unauthorized"  
   If the above "authorized" setting is provided and returns falsy when called, the user will be redirected to this path.
@@ -148,6 +126,36 @@ CanvasAuth requires a baseline configuration to function, as Canvas API settings
   ```ruby
   set :logout_redirect, '/goodbye'
   ```
+&nbsp;
+
+#### Callbacks
+
+The following are optional hooks called by CanvasAuth which allow you to customize certain behavior. They should be defined as [helper methods](http://www.sinatrarb.com/intro.html#Helpers) within your application.
+
+* **oauth_callback(oauth_response)**
+
+  Once the OAuth authentication request has been made, this method is called with the API response from Canvas as an argument. This may be used to define a custom response handling action, such as saving the user's token in a database.
+  ```ruby
+  helpers do
+    def oauth_callback(oauth_response)
+      uid = oauth_response['user']['id']
+      token = oauth_response['access_token']
+      db_connection.execute("UPDATE users SET access_token = ? where uid = ?", token, uid)
+    end
+  end
+  ```
+
+* **authorized()**
+
+  This method may be defined to check the authorization priveleges of a user once they have logged in. It should return truthy for authorized users, falsy otherwise. Since this is called without parameters, it generally makes use of session variables and/or settings which were set during the oauth_callback method or elsewhere in the app.
+  ```ruby
+  helpers do
+    def authorized
+      session[:allowed_roles].includes?(session[:user_roles])
+    end
+  end
+  ```
+
 ## Miscellaneous Notes
 * CanvasAuth automatically assigns `session['user_id']` and `session['access_token']` to the values returned by the OAuth response, so there is no need to do this manually in your oauth_callback proc.
 

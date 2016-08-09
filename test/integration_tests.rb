@@ -37,14 +37,11 @@ class IntegrationTests < Minitest::Test
 
   def test_get_token_path
     state = '/redirected_from/path'
-
-    app.set :oauth_callback, lambda {|x|}
-    app.expects(:oauth_callback)
-
     user_id = 123
     access_token = 456
     api_response = {'access_token' => access_token, 'user' => { 'id' => user_id }}.to_json
     RestClient.stubs(:post).returns(api_response)
+    app.any_instance.expects(:oauth_callback)
 
     get app.token_path, {'state' => state}
     assert_equal 302, last_response.status
@@ -57,7 +54,6 @@ class IntegrationTests < Minitest::Test
 
   def test_unauthenticated_request
     unauthorized_redirect = '/not_authorized'
-    app.set :exempt_paths, ['/login/oauth2/auth']
     RestClient.stubs(:post).returns("{}")
 
     get '/', {}, {'rack.session' => {}}
@@ -75,7 +71,7 @@ class IntegrationTests < Minitest::Test
     unauthorized_redirect = '/not_authorized'
     app.set :unauthorized_redirect, unauthorized_redirect
 
-    app.expects(:authorized).returns(false)
+    app.any_instance.expects(:authorized).returns(false)
 
     get '/', {}, {'rack.session' => {'user_id' => 123}}
     assert_equal 302, last_response.status
@@ -85,7 +81,7 @@ class IntegrationTests < Minitest::Test
   end
 
   def test_authorized_request
-    app.expects(:authorized).returns(true)
+    app.any_instance.expects(:authorized).returns(true)
     get '/', {}, {'rack.session' => {'user_id' => 123}}
     assert last_response.ok?
   end
