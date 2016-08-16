@@ -15,19 +15,63 @@ class IntegrationTests < Minitest::Test
     assert_equal expected_redirect, last_response.headers['Location']
   end
 
+  def test_get_login_path_with_optional_params
+    state = '/redirected_from/123'
+    expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
+                        "client_id=123&" \
+                        "response_type=code&" \
+                        "state=#{state}&" \
+                        "redirect_uri=http://example.org/canvas-auth-token&" \
+                        "scope=auth%2Fuserinfo&" \
+                        "purpose=testing&" \
+                        "force_login=true&" \
+                        "unique_id=a1b2c3"
+
+    request_params = {
+      :state => state,
+      :scope => 'auth/userinfo',
+      :purpose => 'testing',
+      :force_login => true,
+      :unique_id => 'a1b2c3'
+    }
+
+    get app.login_path, request_params
+
+    assert_equal 302, last_response.status
+    assert_equal expected_redirect, last_response.headers['Location']
+  end
+
   def test_get_logout_path
     access_token = 456
     RestClient::Request.expects(:execute).with({
       :method => :delete,
       :url    => "https://canvasurl.com/login/oauth2/token",
-      :payload => {
-        :headers => {
-          :authorization => "Bearer #{access_token}"
-        }
+      :headers => {
+        :authorization => "Bearer #{access_token}"
       }
     }).returns('')
 
     get app.logout_path, {}, {'rack.session' => {'access_token' => access_token }}
+    assert_equal 302, last_response.status
+    assert !session.has_key?('user_id') && !session.has_key?('access_token')
+
+    follow_redirect!
+    assert last_response.ok?
+  end
+
+  def test_get_logout_path_with_optional_params
+    access_token = 456
+    RestClient::Request.expects(:execute).with({
+      :method => :delete,
+      :url    => "https://canvasurl.com/login/oauth2/token&expire_sessions=1",
+      :headers => {
+        :authorization => "Bearer #{access_token}"
+      }
+    }).returns('')
+
+    get app.logout_path, {:expire_sessions => true},
+        {'rack.session' => {'access_token' => access_token }}
+
     assert_equal 302, last_response.status
     assert !session.has_key?('user_id') && !session.has_key?('access_token')
 

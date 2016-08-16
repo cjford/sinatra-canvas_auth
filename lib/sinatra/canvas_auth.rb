@@ -33,6 +33,12 @@ module Sinatra
                           "state=#{params['state']}&" \
                           "redirect_uri=#{redirect_uri}"
 
+        ['scope', 'purpose', 'force_login', 'unique_id'].each do |optional_param|
+          if params[optional_param]
+            redirect_params += "&#{optional_param}=#{CGI.escape(params[optional_param])}"
+          end
+        end
+
         redirect "#{app.canvas_url}/login/oauth2/auth?#{redirect_params}"
       end
 
@@ -55,13 +61,14 @@ module Sinatra
 
       app.get app.logout_path do
         if session['access_token']
+          delete_url = "#{settings.canvas_url}/login/oauth2/token"
+          delete_url += "&expire_sessions=1" if params['expire_sessions']
+
           RestClient::Request.execute({
             :method  => :delete,
-            :url     => "#{settings.canvas_url}/login/oauth2/token",
-            :payload => {
-              :headers => {
-                :authorization => "Bearer #{session['access_token']}"
-              }
+            :url     => delete_url,
+            :headers => {
+              :authorization => "Bearer #{session['access_token']}"
             }
           })
         end
