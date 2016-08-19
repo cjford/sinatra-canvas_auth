@@ -4,8 +4,6 @@ require 'rest-client'
 module Sinatra
   module CanvasAuth
 
-    VERSION = "0.0.1.pre"
-
     DEFAULT_SETTINGS = {
       :auth_paths            => [/.*/],
       :canvas_url            => nil,
