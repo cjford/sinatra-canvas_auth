@@ -25,7 +25,9 @@ module Sinatra
       self.merge_defaults(app)
 
       app.get app.login_path do
-        redirect_uri = "#{request.scheme}://#{request.host_with_port}#{app.token_path}"
+        redirect_uri = "#{request.scheme}://#{request.host_with_port}" \
+                       "#{request.env['SCRIPT_NAME']}#{app.token_path}"
+
         redirect_params = "client_id=#{app.client_id}&" \
                           "response_type=code&" \
                           "state=#{CGI.escape(params['state'])}&" \
@@ -88,7 +90,7 @@ module Sinatra
 
       # Redirect unauthenticated/unauthorized users before hitting app routes
       app.before do
-        current_path = request.env['PATH_INFO']
+        current_path = "#{request.env['SCRIPT_NAME']}#{request.env['PATH_INFO']}"
         if CanvasAuth.auth_path?(self.settings, current_path)
           if session['user_id'].nil?
             redirect "#{request.env['SCRIPT_NAME']}#{settings.login_path}?state=#{current_path}"
