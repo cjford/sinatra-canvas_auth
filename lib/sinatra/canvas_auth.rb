@@ -28,8 +28,8 @@ module Sinatra
         redirect_uri = "#{request.scheme}://#{request.host_with_port}#{app.token_path}"
         redirect_params = "client_id=#{app.client_id}&" \
                           "response_type=code&" \
-                          "state=#{params['state']}&" \
-                          "redirect_uri=#{redirect_uri}"
+                          "state=#{CGI.escape(params['state'])}&" \
+                          "redirect_uri=#{CGI.escape(redirect_uri)}"
 
         ['scope', 'purpose', 'force_login', 'unique_id'].each do |optional_param|
           if params[optional_param]

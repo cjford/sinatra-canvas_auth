@@ -6,8 +6,8 @@ class IntegrationTests < Minitest::Test
     expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
                         "client_id=123&" \
                         "response_type=code&" \
-                        "state=#{state}&" \
-                        "redirect_uri=http://example.org/canvas-auth-token"
+                        "state=%2Fredirected_from%2F123&" \
+                        "redirect_uri=http%3A%2F%2Fexample.org%2Fcanvas-auth-token"
 
     get app.login_path, {:state => state}
 
@@ -20,10 +20,9 @@ class IntegrationTests < Minitest::Test
     expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
                         "client_id=123&" \
                         "response_type=code&" \
-                        "state=#{state}&" \
-                        "redirect_uri=http://example.org/canvas-auth-token&" \
-                        "scope=auth%2Fuserinfo&" \
-                        "purpose=testing&" \
+                        "state=%2Fredirected_from%2F123&" \
+                        "redirect_uri=http%3A%2F%2Fexample.org%2Fcanvas-auth-token&" \
+                        "scope=auth%2Fuserinfo&purpose=testing&" \
                         "force_login=true&" \
                         "unique_id=a1b2c3"
 
