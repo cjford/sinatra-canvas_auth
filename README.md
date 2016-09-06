@@ -30,14 +30,14 @@ require sinatra/canvas_auth
 
 # These settings are required
 configure do
-    enable :sessions
-    set :canvas_url, 'https://ucdenver.instructure.com'
-    set :client_id, 10230000000000045
-    set :client_secret, '659df93f24affc25948ee437f8ac825edfa903d95e3a5ace0bb5ac4fb61686c6'
+  enable :sessions
+  set :canvas_url, 'https://ucdenver.instructure.com'
+  set :client_id, 10230000000000045
+  set :client_secret, '659df93f24affc25948ee437f8ac825edfa903d95e3a5ace0bb5ac4fb61686c6'
 end
 
 get '/' do
-    'Hello World'
+  'Hello World'
 end
 ```
 
@@ -48,19 +48,19 @@ require sinatra/canvas_auth
 
 class App < Sinatra::Base
 
-    # These settings are required
-    configure do
-        enable :sessions
-        set :canvas_url, 'https://ucdenver.instructure.com'
-        set :client_id, 10230000000000045
-        set :client_secret, '659df93f24affc25948ee437f8ac825edfa903d95e3a5ace0bb5ac4fb61686c6'
-    end
+  # These settings are required
+  configure do
+    enable :sessions
+    set :canvas_url, 'https://ucdenver.instructure.com'
+    set :client_id, 10230000000000045
+    set :client_secret, '659df93f24affc25948ee437f8ac825edfa903d95e3a5ace0bb5ac4fb61686c6'
+  end
 
-    register Sinatra::CanvasAuth
+  register Sinatra::CanvasAuth
 
-    get '/' do
-       'Hello World'
-    end
+  get '/' do
+    'Hello World'
+  end
 end
 ```
 
