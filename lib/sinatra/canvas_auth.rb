@@ -25,6 +25,7 @@ module Sinatra
       self.merge_defaults(app)
 
       app.get app.login_path do
+        params['state'] ||= request.env['SCRIPT_NAME']
         redirect_uri = "#{request.scheme}://#{request.host_with_port}" \
                        "#{request.env['SCRIPT_NAME']}#{app.token_path}"
 

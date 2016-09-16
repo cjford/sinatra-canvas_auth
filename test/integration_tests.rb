@@ -40,6 +40,20 @@ class IntegrationTests < Minitest::Test
     assert_equal expected_redirect, last_response.headers['Location']
   end
 
+
+  def test_get_login_with_missing_state
+    expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
+                        "client_id=123&" \
+                        "response_type=code&" \
+                        "state=&" \
+                        "redirect_uri=http%3A%2F%2Fexample.org%2Fcanvas-auth-token"
+
+    get app.login_path
+
+    assert_equal 302, last_response.status
+    assert_equal expected_redirect, last_response.headers['Location']
+  end
+
   def test_get_logout_path
     access_token = 456
     RestClient::Request.expects(:execute).with({
