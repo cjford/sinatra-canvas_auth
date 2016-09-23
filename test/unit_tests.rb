@@ -40,6 +40,20 @@ class UnitTests < Minitest::Test
     assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/logged-out')
   end
 
+  def test_auth_path_defaults_with_script_name
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/canvas-auth-login', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/canvas-auth-logout', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/canvas-auth-token', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/unauthorized', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/logged-out', '/myapp')
+
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/canvas-auth-login', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/canvas-auth-logout', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/canvas-auth-token', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/unauthorized', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/logged-out', '/myapp')
+  end
+
   def test_auth_path_with_regex
     app.set :auth_paths, [/^\/courses\/(\d)+$/]
 
@@ -82,6 +96,26 @@ class UnitTests < Minitest::Test
     assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/test3')
     assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/test4')
     assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/test5')
+  end
+
+  def test_auth_path_exclude_self_paths_with_script_name
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test2', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test3', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test4', '/myapp')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test5', '/myapp')
+
+    app.set :login_path, '/test'
+    app.set :logout_path, '/test2'
+    app.set :token_path, '/test3'
+    app.set :logout_redirect, '/test4'
+    app.set :unauthorized_redirect, '/test5'
+
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test2', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test3', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test4', '/myapp')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test5', '/myapp')
   end
 
   def test_auth_paths_set_manually

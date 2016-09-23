@@ -92,7 +92,7 @@ module Sinatra
       # Redirect unauthenticated/unauthorized users before hitting app routes
       app.before do
         current_path = "#{request.env['SCRIPT_NAME']}#{request.env['PATH_INFO']}"
-        if CanvasAuth.auth_path?(self.settings, current_path)
+        if CanvasAuth.auth_path?(self.settings, current_path, request.env['SCRIPT_NAME'])
           if session['user_id'].nil?
             redirect "#{request.env['SCRIPT_NAME']}#{settings.login_path}?state=#{current_path}"
           elsif self.respond_to?(:authorized) && !authorized
@@ -103,12 +103,12 @@ module Sinatra
     end
 
     # Should the current path ask for authentication or is it public?
-    def self.auth_path?(app, current_path)
+    def self.auth_path?(app, current_path, script_name = '')
       exempt_paths = [ app.login_path, app.token_path, app.logout_path,
                        app.logout_redirect, app.unauthorized_redirect ]
 
       app.auth_paths.select{ |p| current_path.match(p) }.any? &&
-      !exempt_paths.include?(current_path)
+      !exempt_paths.map{|p| File.join(script_name, p)}.include?(current_path)
     end
 
     def self.merge_defaults(app)

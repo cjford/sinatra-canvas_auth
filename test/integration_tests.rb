@@ -15,6 +15,20 @@ class IntegrationTests < Minitest::Test
     assert_equal expected_redirect, last_response.headers['Location']
   end
 
+  def test_get_login_path_with_script_name
+    state = '/redirected_from/123'
+    expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
+                        "client_id=123&" \
+                        "response_type=code&" \
+                        "state=%2Fredirected_from%2F123&" \
+                        "redirect_uri=http%3A%2F%2Fexample.org%2Fmyapp%2Fcanvas-auth-token"
+
+    get app.login_path, {:state => state}, {'SCRIPT_NAME' => '/myapp'}
+
+    assert_equal 302, last_response.status
+    assert_equal expected_redirect, last_response.headers['Location']
+  end
+
   def test_get_login_path_with_optional_params
     state = '/redirected_from/123'
     expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
