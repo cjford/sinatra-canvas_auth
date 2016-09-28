@@ -84,7 +84,7 @@ module Sinatra
       end
 
       app.get '/logged-out' do
-        "You have been logged out <a href='canvas-auth-login'>" \
+        "You have been logged out <a href='canvas-auth-login'>. "\
         "Click here</a> to log in again."
       end
 
