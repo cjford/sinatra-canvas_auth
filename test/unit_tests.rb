@@ -118,6 +118,24 @@ class UnitTests < Minitest::Test
     assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/myapp/test5', '/myapp')
   end
 
+  def test_auth_paths_exclude_public
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/abc')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/abc-a')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/abc-1')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/test')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/test-a')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/test-1')
+
+    app.set :public_paths, ['/abc', /^\/.+-\d/]
+
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/abc')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/abc-a')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/abc-1')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/test')
+    assert Sinatra::CanvasAuth.auth_path?(app.settings, '/test-a')
+    assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/test-1')
+  end
+
   def test_auth_paths_set_manually
     app.set :auth_paths, ['/test1', '/test2']
 

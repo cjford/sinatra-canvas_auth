@@ -105,12 +105,19 @@ CanvasAuth requires a baseline configuration to function, as Canvas API settings
   Default: [/.*/]  
   To only require authentication for certain routes, they may be explicitly specified here with either strings or regular expression. By default, all app routes will require authentication.
   ```ruby
-  set :auth_paths, ['/admin', /^\/courses\/(\d)+$]
+  set :auth_paths, ['/admin', /^\/courses\/(\d)+$/]
   ```
 
   Alternative syntax:
   ```ruby
-  authenticate '/admin', /^\/courses\/(\d)+$
+  authenticate '/admin', /^\/courses\/(\d)+$/
+  ```
+
+* **public_paths** (Array)  
+  Default: []  
+  The inverse of auth_paths, routes matching strings or regexps in this array will not require authentication
+  ```ruby
+  set :public_paths, ['/homepage', /^\/assets\/.+$/]
   ```
 
 * **unauthorized_redirect** (String)  

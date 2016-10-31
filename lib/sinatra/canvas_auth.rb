@@ -13,6 +13,7 @@ module Sinatra
       :token_path            => '/canvas-auth-token',
       :logout_path           => '/canvas-auth-logout',
       :logout_redirect       => '/logged-out',
+      :public_paths          => [],
       :unauthorized_redirect => '/unauthorized'
     }.freeze
 
@@ -105,9 +106,11 @@ module Sinatra
     # Should the current path ask for authentication or is it public?
     def self.auth_path?(app, current_path, script_name = '')
       exempt_paths = [ app.login_path, app.token_path, app.logout_path,
-                       app.logout_redirect, app.unauthorized_redirect ]
+                       app.logout_redirect, app.unauthorized_redirect,
+                       app.failure_redirect ]
 
       app.auth_paths.select{ |p| current_path.match(p) }.any? &&
+      !app.public_paths.select{ |p| current_path.match(p) }.any? &&
       !exempt_paths.map{|p| File.join(script_name, p)}.include?(current_path)
     end
 
