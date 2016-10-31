@@ -27,9 +27,9 @@ module Sinatra
       app.get app.login_path do
         params['state'] ||= request.env['SCRIPT_NAME']
         redirect_uri = "#{request.scheme}://#{request.host_with_port}" \
-                       "#{request.env['SCRIPT_NAME']}#{app.token_path}"
+                       "#{request.env['SCRIPT_NAME']}#{settings.token_path}"
 
-        redirect_params = "client_id=#{app.client_id}&" \
+        redirect_params = "client_id=#{settings.client_id}&" \
                           "response_type=code&" \
                           "state=#{CGI.escape(params['state'])}&" \
                           "redirect_uri=#{CGI.escape(redirect_uri)}"
@@ -40,7 +40,7 @@ module Sinatra
           end
         end
 
-        redirect "#{app.canvas_url}/login/oauth2/auth?#{redirect_params}"
+        redirect "#{settings.canvas_url}/login/oauth2/auth?#{redirect_params}"
       end
 
       app.get app.token_path do
