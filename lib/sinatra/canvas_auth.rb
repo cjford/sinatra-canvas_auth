@@ -9,6 +9,7 @@ module Sinatra
       :canvas_url            => nil,
       :client_id             => nil,
       :client_secret         => nil,
+      :failure_redirect      => '/login-failure',
       :login_path            => '/canvas-auth-login',
       :token_path            => '/canvas-auth-token',
       :logout_path           => '/canvas-auth-logout',
@@ -24,6 +25,25 @@ module Sinatra
 
     def self.registered(app)
       self.merge_defaults(app)
+
+      app.helpers do
+        def login_url(state = nil)
+          return false if request.nil?
+          path_elements = [request.env['SCRIPT_NAME'], settings.login_path]
+          path_elements << state if state
+          File.join(path_elements)
+        end
+
+        def render_view(header='', message='')
+          render(:erb, :canvas_auth, {
+            :views => File.expand_path(File.dirname(__FILE__)),
+            :locals => {
+              :header => header,
+              :message => message
+            }
+          })
+        end
+      end
 
       app.get app.login_path do
         params['state'] ||= request.env['SCRIPT_NAME']
@@ -51,11 +71,17 @@ module Sinatra
           :client_secret => settings.client_secret
         }
 
-        response = RestClient.post("#{settings.canvas_url}/login/oauth2/token", payload)
+        begin
+          response = RestClient.post("#{settings.canvas_url}/login/oauth2/token", payload)
+        rescue RestClient::Exception => e
+          failure_url = File.join(request.env['SCRIPT_NAME'], settings.failure_redirect)
+          failure_url += "?error=#{params[:error]}" unless params[:error].nil?
+          redirect failure_url
+        end
+
         response = JSON.parse(response)
         session['user_id'] = response['user']['id']
         session['access_token'] = response['access_token']
-
         oauth_callback(response) if self.respond_to?(:oauth_callback)
 
         redirect params['state']
@@ -78,17 +104,20 @@ module Sinatra
         redirect to(settings.logout_redirect)
       end
 
-      # These two routes exist to prevent 404'ing with default options, but
-      # ideally they should be overridden by the app, or alternate paths given
-      app.get '/unauthorized' do
-        'Your canvas account unauthorized to view this resource'
+      app.get app.logout_redirect do
+        render_view('Logged out', 'You have been successfully logged out')
       end
 
-      app.get '/logged-out' do
-        "You have been logged out <a href='canvas-auth-login'>. "\
-        "Click here</a> to log in again."
+      app.get app.unauthorized_redirect do
+        render_view('Authentication Failed',
+                    'Your canvas account is unauthorized to view this resource')
       end
 
+      app.get app.failure_redirect do
+        message = "Login could not be completed."
+        message += " (#{params[:error]})" if params[:error] && !params[:error].empty?
+        render_view("Authentication Failed", message)
+      end
 
       # Redirect unauthenticated/unauthorized users before hitting app routes
       app.before do

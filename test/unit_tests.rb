@@ -158,4 +158,55 @@ class UnitTests < Minitest::Test
     assert !Sinatra::CanvasAuth.auth_path?(app.settings, '/test3')
   end
 
+  def test_login_url
+    test_app = app.new
+    state = '/teststate'
+    login_path ='/testlogin'
+    script_name = '/testscript'
+
+    mock_request = OpenStruct.new(:env => {'SCRIPT_NAME' => script_name})
+    mock_settings = OpenStruct.new(:login_path => login_path)
+    Sinatra::Base.any_instance.stubs(:request).returns(mock_request)
+    Sinatra::Base.any_instance.stubs(:settings).returns(mock_settings)
+
+    assert_equal "#{script_name}#{login_path}#{state}", test_app.helpers.login_url(state)
+  end
+
+  def test_login_url_no_state
+    test_app = app.new
+    login_path ='/testlogin'
+    script_name = '/testscript'
+
+    mock_request = OpenStruct.new(:env => {'SCRIPT_NAME' => script_name})
+    mock_settings = OpenStruct.new(:login_path => login_path)
+    Sinatra::Base.any_instance.stubs(:request).returns(mock_request)
+    Sinatra::Base.any_instance.stubs(:settings).returns(mock_settings)
+
+    assert_equal "#{script_name}#{login_path}", test_app.helpers.login_url
+  end
+
+  def test_login_url_no_request_context
+    test_app = app.new
+    refute test_app.helpers.login_url
+  end
+
+  def test_render_view
+    test_app = app.new
+    header = 'header'
+    message = 'message'
+    view_path = 'viewpath'
+
+    expected_options = {
+      :views => view_path,
+      :locals => {
+        :header => header,
+        :message => message
+      }
+    }
+    File.stubs(:expand_path).returns(view_path)
+    Sinatra::Base.any_instance.expects(:render).with(:erb, :canvas_auth, expected_options)
+
+    test_app.helpers.render_view(header, message)
+  end
+
 end

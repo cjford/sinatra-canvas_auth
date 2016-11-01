@@ -133,6 +133,13 @@ CanvasAuth requires a baseline configuration to function, as Canvas API settings
   ```ruby
   set :logout_redirect, '/goodbye'
   ```
+
+* **failure_redirect** (String)  
+  Default: "/login-failure"  
+  If the user declines to grant the app access to their Canvas account, or the API request for a Canvas token raises an unexpected error, the user will be redirected to this path.
+  ```ruby
+  set :error_path, '/auth-error'
+  ```
 &nbsp;
 
 #### Callbacks
@@ -171,9 +178,10 @@ The following are optional hooks called by CanvasAuth which allow you to customi
   * GET  /canvas-auth-logout
   * POST /canvas-auth-token
 
-* The following routes are also defined by CanvasAuth, but only as placeholders that may (and should) be overridden by your application. They do not include any functionality and serve only as landing pages to prevent 404ing on the default redirects.
+* The following routes are also defined by CanvasAuth, and may be overridden by your application, should you wish to replace the default view/behavior provided:
   * GET /unauthorized
   * GET /logged-out
+  * GET /login-failure
 
 * All routes defined by CanvasAuth are permanently exempt from the requiring authentication, to avoid redirect loops.
 ## Contributing

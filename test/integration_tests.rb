@@ -83,7 +83,7 @@ class IntegrationTests < Minitest::Test
     assert !session.has_key?('user_id') && !session.has_key?('access_token')
 
     follow_redirect!
-    assert last_response.ok?
+    assert_equal 200, last_response.status
   end
 
   def test_get_logout_path_with_optional_params
@@ -103,7 +103,7 @@ class IntegrationTests < Minitest::Test
     assert !session.has_key?('user_id') && !session.has_key?('access_token')
 
     follow_redirect!
-    assert last_response.ok?
+    assert_equal 200, last_response.status
   end
 
   def test_get_token_path
@@ -123,8 +123,24 @@ class IntegrationTests < Minitest::Test
     assert_equal state, last_request.path
   end
 
+  def test_get_token_path_error
+    RestClient.expects(:post).raises(RestClient::Exception)
+
+    get app.token_path
+    assert_equal 302, last_response.status
+
+    follow_redirect!
+    assert_equal app.failure_redirect, last_request.path
+  end
+
+  def test_get_login_failure
+    error = 'oopsy'
+    get "#{app.failure_redirect}?error=#{error}"
+    assert_equal 200, last_response.status
+    assert_match error, last_response.body
+  end
+
   def test_unauthenticated_request
-    unauthorized_redirect = '/not_authorized'
     RestClient.stubs(:post).returns("{}")
 
     get '/', {}, {'rack.session' => {}}
@@ -139,16 +155,13 @@ class IntegrationTests < Minitest::Test
   end
 
   def test_unauthorized_request
-    unauthorized_redirect = '/not_authorized'
-    app.set :unauthorized_redirect, unauthorized_redirect
-
     app.any_instance.expects(:authorized).returns(false)
 
     get '/', {}, {'rack.session' => {'user_id' => 123}}
     assert_equal 302, last_response.status
 
     follow_redirect!
-    assert_equal last_request.path, unauthorized_redirect
+    assert_equal app.unauthorized_redirect, last_request.path
   end
 
   def test_authorized_request

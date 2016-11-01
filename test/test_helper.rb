@@ -4,6 +4,7 @@ require 'sinatra/canvas_auth'
 require 'rack/test'
 require 'minitest/autorun'
 require 'mocha/mini_test'
+require 'ostruct'
 
 class Minitest::Test
   include Rack::Test::Methods
