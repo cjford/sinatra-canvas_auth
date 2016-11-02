@@ -2,46 +2,83 @@ require 'test_helper'
 
 class IntegrationTests < Minitest::Test
   def test_get_login_path
-    state = '/redirected_from/123'
+    state = 'a1b2c3'
+    script_name = '/testscript'
+    SecureRandom.stubs(:urlsafe_base64).returns(state)
     expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
                         "client_id=123&" \
                         "response_type=code&" \
-                        "state=%2Fredirected_from%2F123&" \
+                        "state=#{state}&" \
                         "redirect_uri=http%3A%2F%2Fexample.org%2Fcanvas-auth-token"
 
-    get app.login_path, {:state => state}
+    get app.login_path
 
     assert_equal 302, last_response.status
     assert_equal expected_redirect, last_response.headers['Location']
+
+    assert_equal session['oauth_state'], state
   end
 
-  def test_get_login_path_with_script_name
-    state = '/redirected_from/123'
+  def test_get_login_with_script_name
+    state = 'a1b2c3'
+    script_name = '/testscript'
+    redirect = '/redirected-from/123'
+    SecureRandom.stubs(:urlsafe_base64).returns(state)
+
     expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
                         "client_id=123&" \
                         "response_type=code&" \
-                        "state=%2Fredirected_from%2F123&" \
-                        "redirect_uri=http%3A%2F%2Fexample.org%2Fmyapp%2Fcanvas-auth-token"
+                        "state=#{state}&" \
+                        "redirect_uri=http%3A%2F%2Fexample.org%2Ftestscript%2Fcanvas-auth-token"
 
-    get app.login_path, {:state => state}, {'SCRIPT_NAME' => '/myapp'}
+    env = {
+      'SCRIPT_NAME' => script_name,
+      'rack.session' => {'oauth_redirect' => redirect}
+    }
+
+    get app.login_path, {}, env
+    assert_equal 302, last_response.status
+    assert_equal expected_redirect, last_response.headers['Location']
+
+    assert_equal session['oauth_redirect'], redirect
+    assert_equal session['oauth_state'], state
+  end
+
+  def test_get_login_path_default_redirect
+    state = 'a1b2c3'
+    script_name = '/testscript'
+    SecureRandom.stubs(:urlsafe_base64).returns(state)
+
+    expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
+                        "client_id=123&" \
+                        "response_type=code&" \
+                        "state=#{state}&" \
+                        "redirect_uri=http%3A%2F%2Fexample.org%2Ftestscript%2Fcanvas-auth-token"
+
+    get app.login_path, {}, {'SCRIPT_NAME' => script_name}
 
     assert_equal 302, last_response.status
     assert_equal expected_redirect, last_response.headers['Location']
+
+    assert_equal session['oauth_redirect'], script_name
+    assert_equal session['oauth_state'], state
   end
+
 
   def test_get_login_path_with_optional_params
-    state = '/redirected_from/123'
+    state = 'a1b2c3'
+    SecureRandom.stubs(:urlsafe_base64).returns(state)
+
     expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
                         "client_id=123&" \
                         "response_type=code&" \
-                        "state=%2Fredirected_from%2F123&" \
+                        "state=#{state}&" \
                         "redirect_uri=http%3A%2F%2Fexample.org%2Fcanvas-auth-token&" \
                         "scope=auth%2Fuserinfo&purpose=testing&" \
                         "force_login=true&" \
                         "unique_id=a1b2c3"
 
     request_params = {
-      :state => state,
       :scope => 'auth/userinfo',
       :purpose => 'testing',
       :force_login => true,
@@ -54,19 +91,6 @@ class IntegrationTests < Minitest::Test
     assert_equal expected_redirect, last_response.headers['Location']
   end
 
-
-  def test_get_login_with_missing_state
-    expected_redirect = "https://canvasurl.com/login/oauth2/auth?" \
-                        "client_id=123&" \
-                        "response_type=code&" \
-                        "state=&" \
-                        "redirect_uri=http%3A%2F%2Fexample.org%2Fcanvas-auth-token"
-
-    get app.login_path
-
-    assert_equal 302, last_response.status
-    assert_equal expected_redirect, last_response.headers['Location']
-  end
 
   def test_get_logout_path
     access_token = 456
@@ -107,20 +131,51 @@ class IntegrationTests < Minitest::Test
   end
 
   def test_get_token_path
-    state = '/redirected_from/path'
+    state = 'a1b2c3'
     user_id = 123
+    redirect = '/redirected_from/123'
     access_token = 456
     api_response = {'access_token' => access_token, 'user' => { 'id' => user_id }}.to_json
     RestClient.stubs(:post).returns(api_response)
     app.any_instance.expects(:oauth_callback)
 
-    get app.token_path, {'state' => state}
+    env = {
+      'rack.session' => {
+        'oauth_state' => state,
+        'oauth_redirect' => redirect }}
+
+    get app.token_path, {}, env
     assert_equal 302, last_response.status
     assert_equal user_id, session['user_id']
     assert_equal access_token, session['access_token']
 
     follow_redirect!
-    assert_equal state, last_request.path
+    assert_equal redirect, last_request.path
+  end
+
+  def test_get_token_path_invalid_state
+    state = 'a1b2c3'
+    redirect = '/redirected_from/123'
+    message = 'state error'
+
+    Sinatra::CanvasAuth.expects(:verify_oauth_state)
+                       .raises(Sinatra::CanvasAuth::StateError, message)
+    RestClient.expects(:post).never
+    app.any_instance.expects(:oauth_callback).never
+
+    env = {
+      'rack.session' => {
+        'oauth_state' => state,
+        'oauth_redirect' => redirect }}
+
+    get app.token_path, {}, env
+    assert_equal 302, last_response.status
+    assert_nil session['user_id']
+    assert_nil session['access_token']
+
+    follow_redirect!
+    assert_equal app.failure_redirect, last_request.path
+    assert_match /#{message}/, last_response.body
   end
 
   def test_get_token_path_error
@@ -131,6 +186,7 @@ class IntegrationTests < Minitest::Test
 
     follow_redirect!
     assert_equal app.failure_redirect, last_request.path
+    assert_match /Authentication Failed/, last_response.body
   end
 
   def test_get_login_failure

@@ -1,8 +1,11 @@
 require 'sinatra'
 require 'rest-client'
+require 'securerandom'
 
 module Sinatra
   module CanvasAuth
+
+    class StateError < ::StandardError; end
 
     DEFAULT_SETTINGS = {
       :auth_paths            => [/.*/],
@@ -46,13 +49,15 @@ module Sinatra
       end
 
       app.get app.login_path do
-        params['state'] ||= request.env['SCRIPT_NAME']
+        session['oauth_redirect'] ||= request.env['SCRIPT_NAME']
+        session['oauth_state'] = SecureRandom.urlsafe_base64(24)
+
         redirect_uri = "#{request.scheme}://#{request.host_with_port}" \
                        "#{request.env['SCRIPT_NAME']}#{settings.token_path}"
 
         redirect_params = "client_id=#{settings.client_id}&" \
                           "response_type=code&" \
-                          "state=#{CGI.escape(params['state'])}&" \
+                          "state=#{session['oauth_state']}&" \
                           "redirect_uri=#{CGI.escape(redirect_uri)}"
 
         ['scope', 'purpose', 'force_login', 'unique_id'].each do |optional_param|
@@ -72,11 +77,11 @@ module Sinatra
         }
 
         begin
+          CanvasAuth.verify_oauth_state(session, params)
           response = RestClient.post("#{settings.canvas_url}/login/oauth2/token", payload)
-        rescue RestClient::Exception => e
+        rescue RestClient::Exception, CanvasAuth::StateError => e
           failure_url = File.join(request.env['SCRIPT_NAME'], settings.failure_redirect)
-          failure_url += "?error=#{params[:error]}" unless params[:error].nil?
-          redirect failure_url
+          redirect (failure_url + "?error=#{params[:error] || CGI.escape(e.to_s)}")
         end
 
         response = JSON.parse(response)
@@ -84,7 +89,7 @@ module Sinatra
         session['access_token'] = response['access_token']
         oauth_callback(response) if self.respond_to?(:oauth_callback)
 
-        redirect params['state']
+        redirect session['oauth_redirect']
       end
 
       app.get app.logout_path do
@@ -115,7 +120,10 @@ module Sinatra
 
       app.get app.failure_redirect do
         message = "Login could not be completed."
-        message += " (#{params[:error]})" if params[:error] && !params[:error].empty?
+        if params[:error] && !params[:error].empty?
+          message += " (#{CGI.unescape(params[:error])})"
+        end
+
         render_view("Authentication Failed", message)
       end
 
@@ -124,7 +132,8 @@ module Sinatra
         current_path = "#{request.env['SCRIPT_NAME']}#{request.env['PATH_INFO']}"
         if CanvasAuth.auth_path?(self.settings, current_path, request.env['SCRIPT_NAME'])
           if session['user_id'].nil?
-            redirect "#{request.env['SCRIPT_NAME']}#{settings.login_path}?state=#{current_path}"
+            session['oauth_redirect'] = current_path
+            redirect "#{request.env['SCRIPT_NAME']}#{settings.login_path}"
           elsif self.respond_to?(:authorized) && !authorized
             redirect "#{request.env['SCRIPT_NAME']}#{settings.unauthorized_redirect}"
           end
@@ -148,6 +157,17 @@ module Sinatra
         if !app.respond_to?(key)
           app.set key, value
         end
+      end
+    end
+
+    # Verify state param from Canvas is the same one originally sent. Otherwise,
+    # unauthorized requests can be made by intercepting the redirect from Canvas
+    # to app token_path and tricking an authorized user into accessing the link.
+    # http://homakov.blogspot.com/2012/07/saferweb-most-common-oauth2.html
+    def self.verify_oauth_state(params, session)
+      saved_state = session['oauth_state']
+      if saved_state != params['state'] || (saved_state && saved_state.empty?)
+        raise CanvasAuth::StateError, 'Invalid OAuth state token provided'
       end
     end
   end

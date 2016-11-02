@@ -209,4 +209,20 @@ class UnitTests < Minitest::Test
     test_app.helpers.render_view(header, message)
   end
 
+  def test_verify_oauth_state
+    state = 'a1b2c3'
+    params = {'state' => state}
+    session = {'oauth_state' => state}
+    assert_nil Sinatra::CanvasAuth.verify_oauth_state(params, session)
+  end
+
+  def test_verify_oauth_state_mismatch
+    state = 'a1b2c3'
+    params = {'state' => state}
+    session = {'oauth_state' => state + 'xxx'}
+    assert_raises Sinatra::CanvasAuth::StateError do
+      Sinatra::CanvasAuth.verify_oauth_state(params, session)
+    end
+  end
+
 end
