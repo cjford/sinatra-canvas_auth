@@ -5,6 +5,7 @@ require 'rack/test'
 require 'minitest/autorun'
 require 'mocha/mini_test'
 require 'ostruct'
+require 'json'
 
 class Minitest::Test
   include Rack::Test::Methods
