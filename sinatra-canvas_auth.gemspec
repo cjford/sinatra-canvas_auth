@@ -8,9 +8,9 @@ Gem::Specification.new do |spec|
   spec.name          = "sinatra-canvas_auth"
   spec.version       = Sinatra::CanvasAuth::VERSION
   spec.author        = "Connor Ford"
-  spec.email         = "connor.ford@ucdenver.edu"
+  spec.email         = "cjford128@gmail.com"
   spec.summary       = %q{Canvas LMS OAuth flow for Sinatra}
-  spec.homepage      = "https://github.com/cuonline"
+  spec.homepage      = "https://github.com/cjford/sinatra-canvas_auth"
   spec.license       = "MIT"
 
   spec.files = Dir['lib/**/*', 'README.md']
